@@ -32,7 +32,7 @@ class Embedding(L.LightningModule):
         x, y = batch
         embeddings = self(x)
         loss = pairwise_cosine_embedding_loss(embeddings, y)
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
