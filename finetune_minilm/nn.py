@@ -1,7 +1,7 @@
 from itertools import combinations
-from sentence_transformers.models import Pooling
 
 import torch
+from sentence_transformers.models import Pooling
 from transformers import AutoModel
 
 
