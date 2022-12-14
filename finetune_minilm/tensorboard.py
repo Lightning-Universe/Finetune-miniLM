@@ -37,12 +37,9 @@ class DriveTensorBoardLogger(L.pytorch.loggers.TensorBoardLogger):
         fs.invalidate_cache()
 
         source_path = Path(self.log_dir).resolve()
-        destination_path = self.drive._to_shared_path(
-            self.log_dir, component_name=self.drive.component_name
-        )
+        destination_path = self.drive._to_shared_path(self.log_dir, component_name=self.drive.component_name)
 
         def _copy(from_path: Path, to_path: Path) -> Optional[Exception]:
-
             try:
                 # NOTE: S3 does not have a concept of directories, so we do not need to create one.
                 if isinstance(fs, LocalFileSystem):
@@ -72,17 +69,11 @@ class DriveTensorBoardLogger(L.pytorch.loggers.TensorBoardLogger):
 
 class TensorBoardWork(L.app.LightningWork):
     def __init__(self, *args, drive: Drive, **kwargs):
-        super().__init__(
-            *args,
-            parallel=True,
-            cloud_build_config=L.BuildConfig(requirements=["tensorboard"]),
-            **kwargs,
-        )
+        super().__init__(*args, parallel=True, cloud_build_config=L.BuildConfig(requirements=["tensorboard"]), **kwargs)
 
         self.drive = drive
 
     def run(self):
-
         use_localhost = not is_running_in_cloud()
 
         local_folder = f"./tensorboard_logs/{uuid4()}"
@@ -90,9 +81,7 @@ class TensorBoardWork(L.app.LightningWork):
         os.makedirs(local_folder, exist_ok=True)
 
         # Note: Used tensorboard built-in sync methods but it doesn't seem to work.
-        cmd = (
-            f"tensorboard --logdir={local_folder} --host {self.host} --port {self.port}"
-        )
+        cmd = f"tensorboard --logdir={local_folder} --host {self.host} --port {self.port}"
 
         if use_localhost:
             # installs tensorboard ONLY in the process it needs to be in
@@ -117,9 +106,7 @@ class TensorBoardWork(L.app.LightningWork):
                     if "events.out.tfevents" not in filepath:
                         continue
                     source_path = os.path.join(dir, filepath)
-                    target_path = os.path.join(dir, filepath).replace(
-                        root_folder, local_folder
-                    )
+                    target_path = os.path.join(dir, filepath).replace(root_folder, local_folder)
                     if use_localhost:
                         parent = Path(target_path).resolve().parent
                         if not parent.exists():

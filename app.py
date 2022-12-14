@@ -1,108 +1,99 @@
-#! pip install git+https://github.com/Lightning-AI/LAI-Text-Classification-Component
+#! pip install git+https://github.com/Lightning-AI/Finetune-miniLM
 #! mkdir -p ${HOME}/data/yelpreviewfull
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/train.csv -o ${HOME}/data/yelpreviewfull/train.csv
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/test.csv -o ${HOME}/data/yelpreviewfull/test.csv
-
-import os
-from copy import deepcopy
-
 import lightning as L
-from lightning.app.storage import Drive
-from torch.optim import AdamW
-from transformers import BloomForSequenceClassification, BloomTokenizerFast
+import torch
+from transformers import *
+from sentence_transformers.models import Pooling
 
-from lai_textclf import (DriveTensorBoardLogger, MultiNodeLightningTrainerWithTensorboard,
-                         TextClassificationDataLoader, TextDataset,
-                         default_callbacks, get_default_clf_metrics,
-                         warn_if_drive_not_empty, warn_if_local)
+from finetune_minilm import *
 
 
-class TextClassification(L.LightningModule):
-    def __init__(self, model, tokenizer, metrics=None):
+class Embedding(L.LightningModule):
+    """
+    Loosely based on "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks": https://arxiv.org/abs/1908.10084
+
+    Finetunes a Bert-based model (from HF) for classification by minimizing the cosine similarity loss of text pairs.
+    """
+
+    def __init__(self, module):
         super().__init__()
-        self.model = model
-        self.tokenizer = tokenizer
-        if metrics is None:
-            metrics = {}
-        self.train_metrics = deepcopy(metrics)
-        self.val_metrics = deepcopy(metrics)
+        self.module = module
+        self.pooling = Pooling(module.config.hidden_size)
+
+    def forward(self, batch):
+        # adapted from https://github.com/UKPLab/sentence-transformers/blob/v2.2.2/sentence_transformers/models/Transformer.py#L60-L79
+        output_states = self.module(**batch)
+        output_tokens = output_states.last_hidden_state
+        batch.update({"token_embeddings": output_tokens})
+        return self.pooling(batch)["sentence_embedding"]
 
     def training_step(self, batch, batch_idx):
-        output = self.model(**batch)
-        self.log("train_loss", output.loss, prog_bar=True, on_epoch=True, on_step=True)
-        self.train_metrics(output.logits, batch["labels"])
-        self.log_dict(self.train_metrics, on_epoch=True, on_step=True)
-        return output.loss
+        x, y = batch
+        embeddings = self(x)
+        loss = pairwise_cosine_embedding_loss(embeddings, y)
+        self.log("train_loss", loss, prog_bar=True)
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        output = self.model(**batch)
-        self.log("val_loss", output.loss, prog_bar=True)
-        self.val_metrics(output.logits, batch["labels"])
-        self.log_dict(self.val_metrics)
+        x, y = batch
+        embeddings = self(x)
+        loss = pairwise_cosine_embedding_loss(embeddings, y)
+        self.log("val_loss", loss, prog_bar=True)
+        return loss
 
     def configure_optimizers(self):
-        return AdamW(self.parameters(), lr=0.0001)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-5, weight_decay=0.001)
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, num_warmup_steps=5, num_training_steps=self.trainer.estimated_stepping_batches
+        )
+        return [optimizer], [scheduler]
 
 
-class MyTextClassification(L.LightningWork):
+class FinetuneEmbedding(L.LightningWork):
     def __init__(self, *args, tb_drive, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensorboard_drive = tb_drive
 
     def run(self):
-        warn_if_drive_not_empty(self.tensorboard_drive)
-        warn_if_local()
+        tokenizer = self.configure_tokenizer()
+        train_dataloader = self.configure_data("~/data/yelpreviewfull/train.csv", tokenizer)
+        val_dataloader = self.configure_data("~/data/yelpreviewfull/test.csv", tokenizer)
+        lightning_module = Embedding(module=self.configure_module())
 
-        # --------------------
-        # CONFIGURE YOUR MODEL
-        # --------------------
-        # Choose from: bloom-560m, bloom-1b1, bloom-1b7, bloom-3b
-        # For local runs: Choose a small model (i.e. bloom-560m)
-        model_type = "bigscience/bloom-3b"
-        tokenizer = BloomTokenizerFast.from_pretrained(model_type)
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.padding_side = "left"
-        module = BloomForSequenceClassification.from_pretrained(
-            model_type, num_labels=5, ignore_mismatched_sizes=True
-        )
-
-        # -------------------
-        # CONFIGURE YOUR DATA
-        # -------------------
-        train_dataloader = TextClassificationDataLoader(
-            dataset=TextDataset(
-                csv_file=os.path.expanduser("~/data/yelpreviewfull/train.csv")
-            ),
-            tokenizer=tokenizer,
-        )
-        val_dataloader = TextClassificationDataLoader(
-            dataset=TextDataset(
-                csv_file=os.path.expanduser("~/data/yelpreviewfull/test.csv")
-            ),
-            tokenizer=tokenizer,
-        )
-
-        # -------------------
-        # RUN YOUR FINETUNING
-        # -------------------
-        pl_module = TextClassification(
-            model=module, tokenizer=tokenizer, metrics=get_default_clf_metrics(5)
-        )
-
-        # For local runs without multiple gpus, change strategy to "ddp"
         trainer = L.Trainer(
-            max_epochs=2,
+            max_epochs=5,
             limit_train_batches=100,
             limit_val_batches=100,
-            strategy="deepspeed_stage_3_offload",
+            # strategy="ddp",  # FIXME
             precision=16,
-            callbacks=default_callbacks(),
-            logger=DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
+            accelerator="auto",
+            devices="auto",
+            callbacks=self.configure_callbacks(),
+            logger=False,  # DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
             log_every_n_steps=5,
         )
-        trainer.fit(pl_module, train_dataloader, val_dataloader)
+        trainer.fit(lightning_module, train_dataloader, val_dataloader)
+
+    def configure_module(self):
+        # https://github.com/microsoft/unilm/tree/master/minilm#english-pre-trained-models. 33M parameters
+        return AutoModel.from_pretrained("microsoft/MiniLM-L12-H384-uncased", output_hidden_states=True)
+
+    def configure_tokenizer(self):
+        return AutoTokenizer.from_pretrained("microsoft/MiniLM-L12-H384-uncased")
+
+    def configure_data(self, path: str, tokenizer) -> torch.utils.data.DataLoader:
+        # FIXME: batch size
+        return TokenizedDataloader(dataset=TextDataset(csv_file=path), batch_size=8, tokenizer=tokenizer)
+
+    def configure_callbacks(self):
+        early_stopping = L.pytorch.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.00, verbose=True, mode="min")
+        checkpoints = L.pytorch.callbacks.ModelCheckpoint(save_top_k=3, monitor="val_loss", mode="min")
+        return [early_stopping, checkpoints]
 
 
-app = L.LightningApp(
-    MultiNodeLightningTrainerWithTensorboard(MyTextClassification, 2, L.CloudCompute("gpu-fast-multi", disk_size=50))
-)
+# FIXME
+# app = L.LightningApp(TrainerWithTensorboard(FinetuneEmbedding, L.CloudCompute("gpu-fast", disk_size=50)))
+e = FinetuneEmbedding(tb_drive="foo")
+e.run()
