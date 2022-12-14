@@ -1,4 +1,3 @@
-import warnings
 from typing import Type
 
 import lightning as L

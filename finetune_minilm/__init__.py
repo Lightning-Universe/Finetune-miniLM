@@ -1,4 +1,4 @@
 from finetune_minilm.data import TokenizedDataloader, TextDataset
 from finetune_minilm.trainerwithtensorboard import TrainerWithTensorboard
 from finetune_minilm.tensorboard import DriveTensorBoardLogger, TensorBoardWork
-from finetune_minilm.nn import pairwise_cosine_embedding_loss
+from finetune_minilm.nn import pairwise_cosine_embedding_loss, TextEmbedder

@@ -5,8 +5,6 @@
 import lightning as L
 import torch
 from transformers import *
-from sentence_transformers.models import Pooling
-
 from finetune_minilm import *
 
 
@@ -17,27 +15,20 @@ class Embedding(L.LightningModule):
     Finetunes a Bert-based model (from HF) for classification by minimizing the cosine similarity loss of text pairs.
     """
 
-    def __init__(self, module):
+    def __init__(self, module: TextEmbedder):
         super().__init__()
         self.module = module
-        self.pooling = Pooling(module.config.hidden_size)
-
-    def forward(self, batch):
-        output_states = self.module(**batch)
-        output_tokens = output_states.last_hidden_state
-        batch.update({"token_embeddings": output_tokens})
-        return self.pooling(batch)["sentence_embedding"]
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        embeddings = self(x)
+        embeddings = self.module(x)
         loss = pairwise_cosine_embedding_loss(embeddings, y)
         self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        embeddings = self(x)
+        embeddings = self.module(x)
         loss = pairwise_cosine_embedding_loss(embeddings, y)
         self.log("val_loss", loss, prog_bar=True)
         return loss
@@ -77,7 +68,7 @@ class FinetuneEmbedding(L.LightningWork):
 
     def configure_module(self):
         # https://github.com/microsoft/unilm/tree/master/minilm#english-pre-trained-models. 33M parameters
-        return AutoModel.from_pretrained("microsoft/MiniLM-L12-H384-uncased", output_hidden_states=True)
+        return TextEmbedder(backbone="microsoft/MiniLM-L12-H384-uncased")
 
     def configure_tokenizer(self):
         return AutoTokenizer.from_pretrained("microsoft/MiniLM-L12-H384-uncased")

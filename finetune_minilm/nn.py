@@ -1,6 +1,23 @@
 from itertools import combinations
+from sentence_transformers.models import Pooling
 
 import torch
+from transformers import AutoModel
+
+
+class TextEmbedder(torch.nn.Module):
+    """https://lightning-flash.readthedocs.io/en/latest/reference/text_embedder.html"""
+
+    def __init__(self, backbone: str):
+        super().__init__()
+        self.module = AutoModel.from_pretrained(backbone)
+        self.pooling = Pooling(self.module.config.hidden_size)
+
+    def forward(self, batch):
+        output_states = self.module(**batch)
+        output_tokens = output_states.last_hidden_state
+        batch.update({"token_embeddings": output_tokens})
+        return self.pooling(batch)["sentence_embedding"]
 
 
 def cosine_embedding_loss(
