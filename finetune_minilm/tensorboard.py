@@ -72,7 +72,6 @@ class DriveTensorBoardLogger(L.pytorch.loggers.TensorBoardLogger):
 class TensorBoardWork(L.app.LightningWork):
     def __init__(self, *args, drive: Drive, **kwargs):
         super().__init__(*args, parallel=True, cloud_build_config=L.BuildConfig(requirements=["tensorboard"]), **kwargs)
-        warn_if_drive_not_empty(drive)
         self.drive = drive
 
     def run(self):

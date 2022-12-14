@@ -45,6 +45,7 @@ class FinetuneEmbedding(L.LightningWork):
     def __init__(self, *args, tb_drive, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensorboard_drive = tb_drive
+        warn_if_drive_not_empty(tb_drive)
 
     def run(self):
         L.seed_everything(777, workers=True)
