@@ -65,12 +65,12 @@ class FinetuneEmbedding(L.LightningWork):
             max_epochs=5,
             limit_train_batches=100,
             limit_val_batches=100,
-            # strategy="ddp",  # FIXME
+            strategy="ddp",
             precision=16,
             accelerator="auto",
             devices="auto",
             callbacks=self.configure_callbacks(),
-            logger=False,  # FIXME DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
+            logger=DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
             log_every_n_steps=5,
         )
         trainer.fit(lightning_module, train_dataloader, val_dataloader)
@@ -83,8 +83,7 @@ class FinetuneEmbedding(L.LightningWork):
         return AutoTokenizer.from_pretrained("microsoft/MiniLM-L12-H384-uncased")
 
     def configure_data(self, path: str, tokenizer) -> torch.utils.data.DataLoader:
-        # FIXME: batch size
-        return TokenizedDataloader(dataset=TextDataset(csv_file=path), batch_size=8, tokenizer=tokenizer)
+        return TokenizedDataloader(dataset=TextDataset(csv_file=path), batch_size=16, tokenizer=tokenizer)
 
     def configure_callbacks(self):
         early_stopping = L.pytorch.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.00, verbose=True, mode="min")
@@ -92,7 +91,4 @@ class FinetuneEmbedding(L.LightningWork):
         return [early_stopping, checkpoints]
 
 
-# FIXME
-# app = L.LightningApp(TrainerWithTensorboard(FinetuneEmbedding, L.CloudCompute("gpu-fast", disk_size=50)))
-e = FinetuneEmbedding(tb_drive="foo")
-e.run()
+app = L.LightningApp(TrainerWithTensorboard(FinetuneEmbedding, L.CloudCompute("gpu-fast", disk_size=50)))
