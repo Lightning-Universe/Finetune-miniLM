@@ -14,6 +14,8 @@ from lightning.app.storage.path import _filesystem
 from lightning.app.utilities.cloud import is_running_in_cloud
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 
+from finetune_minilm.utilities import warn_if_drive_not_empty
+
 
 class DriveTensorBoardLogger(L.pytorch.loggers.TensorBoardLogger):
     def __init__(self, *args, drive: Drive, refresh_time: int = 5, **kwargs):
@@ -70,7 +72,7 @@ class DriveTensorBoardLogger(L.pytorch.loggers.TensorBoardLogger):
 class TensorBoardWork(L.app.LightningWork):
     def __init__(self, *args, drive: Drive, **kwargs):
         super().__init__(*args, parallel=True, cloud_build_config=L.BuildConfig(requirements=["tensorboard"]), **kwargs)
-
+        warn_if_drive_not_empty(drive)
         self.drive = drive
 
     def run(self):
