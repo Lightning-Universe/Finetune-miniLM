@@ -12,7 +12,7 @@ class TrainerWithTensorboard(L.LightningFlow):
         self.tensorboard_work = TensorBoardWork(drive=tb_drive)
         self.trainer_work = work_cls(cloud_compute=cloud_compute, tb_drive=tb_drive)
 
-    def run(self, *args, **kwargs) -> None:
+    def run(self) -> None:
         self.tensorboard_work.run()
         self.trainer_work.run()
 
