@@ -23,7 +23,6 @@ class Embedding(L.LightningModule):
         self.pooling = Pooling(module.config.hidden_size)
 
     def forward(self, batch):
-        # adapted from https://github.com/UKPLab/sentence-transformers/blob/v2.2.2/sentence_transformers/models/Transformer.py#L60-L79
         output_states = self.module(**batch)
         output_tokens = output_states.last_hidden_state
         batch.update({"token_embeddings": output_tokens})
@@ -71,7 +70,7 @@ class FinetuneEmbedding(L.LightningWork):
             accelerator="auto",
             devices="auto",
             callbacks=self.configure_callbacks(),
-            logger=False,  # DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
+            logger=False,  # FIXME DriveTensorBoardLogger(save_dir=".", drive=self.tensorboard_drive),
             log_every_n_steps=5,
         )
         trainer.fit(lightning_module, train_dataloader, val_dataloader)
