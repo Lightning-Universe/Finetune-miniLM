@@ -22,7 +22,8 @@ class EmbeddingSimilarity(L.LightningModule):
         x, y = batch
         embeddings = self.module(x)
         loss = pairwise_cosine_embedding_loss(embeddings, y)
-        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("train_loss_epoch", loss, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("train_loss_step", loss)
         return loss
 
     def validation_step(self, batch, _):
