@@ -8,7 +8,7 @@ from transformers import *
 from finetune_minilm import *
 
 
-class Embedding(L.LightningModule):
+class EmbeddingSimilarity(L.LightningModule):
     """
     Loosely based on "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks": https://arxiv.org/abs/1908.10084
 
@@ -41,24 +41,25 @@ class Embedding(L.LightningModule):
         return [optimizer], [scheduler]
 
 
-class FinetuneEmbedding(L.LightningWork):
+class Finetune(L.LightningWork):
     def __init__(self, *args, tb_drive, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensorboard_drive = tb_drive
-        warn_if_drive_not_empty(tb_drive)
 
     def run(self):
+        warn_if_drive_not_empty(self.tensorboard_drive)
+
         L.seed_everything(777, workers=True)
         tokenizer = self.configure_tokenizer()
         train_dataloader = self.configure_data("~/data/yelpreviewfull/train.csv", tokenizer)
         val_dataloader = self.configure_data("~/data/yelpreviewfull/test.csv", tokenizer)
-        lightning_module = Embedding(module=self.configure_module())
+        lightning_module = self.configure_module()
 
         trainer = L.Trainer(
             max_epochs=5,
             limit_train_batches=100,
             limit_val_batches=100,
-            strategy="ddp",
+            strategy="ddp_find_unused_parameters_false",
             precision=16,
             accelerator="auto",
             devices="auto",
@@ -68,9 +69,10 @@ class FinetuneEmbedding(L.LightningWork):
         )
         trainer.fit(lightning_module, train_dataloader, val_dataloader)
 
-    def configure_module(self):
+    def configure_module(self) -> L.LightningModule:
         # https://github.com/microsoft/unilm/tree/master/minilm#english-pre-trained-models. 33M parameters
-        return TextEmbedder(backbone="microsoft/MiniLM-L12-H384-uncased")
+        module = TextEmbedder(backbone="microsoft/MiniLM-L12-H384-uncased")
+        return EmbeddingSimilarity(module)
 
     def configure_tokenizer(self):
         return AutoTokenizer.from_pretrained("microsoft/MiniLM-L12-H384-uncased")
@@ -84,4 +86,4 @@ class FinetuneEmbedding(L.LightningWork):
         return [early_stopping, checkpoints]
 
 
-app = L.LightningApp(TrainerWithTensorboard(FinetuneEmbedding, L.CloudCompute("gpu-fast", disk_size=50)))
+app = L.LightningApp(TrainerWithTensorboard(Finetune, L.CloudCompute("gpu-fast", disk_size=50)))
