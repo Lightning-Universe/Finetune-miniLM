@@ -1,10 +1,11 @@
-#! pip install git+https://github.com/Lightning-AI/Finetune-miniLM
+#! pip install .
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/train.csv --create-dirs -o ${HOME}/data/yelpreviewfull/train.csv -C -
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/test.csv --create-dirs -o ${HOME}/data/yelpreviewfull/test.csv -C -
 import lightning as L
 import torch
-from finetune_minilm import *
 import transformers
+from finetune_minilm import (TextEmbedder, pairwise_cosine_embedding_loss, warn_if_drive_not_empty,
+                             DriveTensorBoardLogger, TokenizedDataloader, TextDataset, TrainerWithTensorboard)
 
 
 class EmbeddingSimilarity(L.LightningModule):
