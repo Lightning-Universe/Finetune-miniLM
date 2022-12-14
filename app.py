@@ -44,6 +44,9 @@ class Finetune(L.LightningWork):
     def __init__(self, *args, tb_drive, **kwargs):
         super().__init__(*args, **kwargs)
         self.tensorboard_drive = tb_drive
+        if L.app.utilities.cloud.is_running_in_cloud():
+            # remove `if` after https://github.com/Lightning-AI/lightning/pull/16057 is released
+            self.lightningignore = ("checkpoints",)
 
     def run(self):
         warn_if_drive_not_empty(self.tensorboard_drive)
