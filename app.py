@@ -47,6 +47,7 @@ class FinetuneEmbedding(L.LightningWork):
         self.tensorboard_drive = tb_drive
 
     def run(self):
+        L.seed_everything(777, workers=True)
         tokenizer = self.configure_tokenizer()
         train_dataloader = self.configure_data("~/data/yelpreviewfull/train.csv", tokenizer)
         val_dataloader = self.configure_data("~/data/yelpreviewfull/test.csv", tokenizer)
@@ -74,7 +75,7 @@ class FinetuneEmbedding(L.LightningWork):
         return AutoTokenizer.from_pretrained("microsoft/MiniLM-L12-H384-uncased")
 
     def configure_data(self, path: str, tokenizer) -> torch.utils.data.DataLoader:
-        return TokenizedDataloader(dataset=TextDataset(csv_file=path), batch_size=16, tokenizer=tokenizer)
+        return TokenizedDataloader(dataset=TextDataset(csv_file=path), batch_size=16, shuffle=True, tokenizer=tokenizer)
 
     def configure_callbacks(self):
         early_stopping = L.pytorch.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.00, verbose=True, mode="min")
