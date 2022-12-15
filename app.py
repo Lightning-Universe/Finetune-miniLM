@@ -1,4 +1,4 @@
-#! pip install .
+#! pip install git+https://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@github.com/Lightning-AI/Finetune-miniLM
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/train.csv --create-dirs -o ${HOME}/data/yelpreviewfull/train.csv -C -
 #! curl https://s3.amazonaws.com/pl-flash-data/lai-llm/lai-text-classification/datasets/Yelp/datasets/YelpReviewFull/yelp_review_full_csv/test.csv --create-dirs -o ${HOME}/data/yelpreviewfull/test.csv -C -
 import lightning as L
