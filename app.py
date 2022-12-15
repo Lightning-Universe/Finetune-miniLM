@@ -73,8 +73,6 @@ class Finetune(L.LightningWork):
         )
         trainer.fit(lightning_module, train_dataloader, val_dataloader)
 
-        self.stop()  # shut down the hardware - stop billing
-
     def configure_module(self) -> L.LightningModule:
         # https://github.com/microsoft/unilm/tree/master/minilm#english-pre-trained-models. 33M parameters
         module = TextEmbedder(backbone="microsoft/MiniLM-L12-H384-uncased")
