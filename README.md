@@ -20,6 +20,18 @@ source venv/bin/activate
 pip install lightning
 ```
 
+### To share the code
+
+Option 1:
+
+1. Share the [app.py](/app.py) code
+2. See instructions for running below
+
+Option 2:
+
+1. `git clone https://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@github.com/Lightning-AI/Finetune-miniLM`
+2. See instructions for running below
+
 ### Running on the cloud
 
 ```bash
