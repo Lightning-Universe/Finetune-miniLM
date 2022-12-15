@@ -1,3 +1,4 @@
+import platform
 from typing import Type
 
 import lightning as L
@@ -11,8 +12,9 @@ class TrainerWithTensorboard(L.LightningFlow):
         tb_drive = L.app.storage.Drive("lit://tb_drive")
         self.tensorboard_work = TensorBoardWork(drive=tb_drive)
         self.trainer_work = work_cls(cloud_compute=cloud_compute, tb_drive=tb_drive)
-        # workaround for issue https://github.com/Lightning-AI/lightning/issues/16078
-        self.trainer_work._start_method = "spawn"
+        if platform.processor() in ("arm", "arm64") and self.trainer_work._start_method == "fork":
+            # workaround for issue https://github.com/Lightning-AI/lightning/issues/16078
+            self.trainer_work._start_method = "spawn"
 
     def run(self) -> None:
         self.tensorboard_work.run()
