@@ -20,5 +20,9 @@ class TrainerWithTensorboard(L.LightningFlow):
         self.tensorboard_work.run()
         self.trainer_work.run()
 
+        # stop the machine when finished
+        if self.trainer_work.has_succeeded:
+            self.trainer_work.stop()
+
     def configure_layout(self):
         return [{"name": "Training Logs", "content": self.tensorboard_work.url}]
