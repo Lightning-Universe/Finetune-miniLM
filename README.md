@@ -1,4 +1,4 @@
-# Finetune a MiniLM (from HF!)
+# Finetune a MiniLM! (from HF)
 
 Fork of https://github.com/Lightning-AI/LAI-Text-Classification-Component
 Task: https://lightningai.atlassian.net/browse/ENG-2261
@@ -52,3 +52,5 @@ lightning run app app.py --setup
 ## Development notes
 
 There's a gallery-ready copy of the entrypoint in https://github.com/Lightning-AI/Finetune-miniLM-gallery. Changes to the [app.py](/app.py) file should be applied there aswell.
+
+To share this private repository with third parties, we use a read-only token associated to @CarlosatLightningAI which is a new user that only has access to this repository as an "Outside Collaborator". The current token will expire on Mar 16 2023.
