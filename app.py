@@ -1,4 +1,4 @@
-# ! pip install git+https://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@github.com/Lightning-AI/Finetune-miniLM
+# ! pip install git+https://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@github.com/Lightning-AI/Finetune-miniLM
 # ! curl -L https://bit.ly/yelp_train --create-dirs -o ${HOME}/data/yelp/train.csv -C -
 # ! curl -L https://bit.ly/yelp_test --create-dirs -o ${HOME}/data/yelp/test.csv -C -
 import lightning as L

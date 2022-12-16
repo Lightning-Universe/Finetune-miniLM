@@ -29,7 +29,7 @@ Option 1:
 
 Option 2:
 
-1. `git clone https://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@github.com/Lightning-AI/Finetune-miniLM`
+1. `git clone https://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@github.com/Lightning-AI/Finetune-miniLM`
 2. See instructions for running below
 
 ### Running on the cloud
