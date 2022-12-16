@@ -46,3 +46,8 @@ Don't want to use the public cloud? Contact us at `product@lightning.ai` for ear
 ```bash
 lightning run app app.py --setup
 ```
+
+
+## Development notes
+
+There's a gallery-ready copy of the entrypoint in https://github.com/Lightning-AI/Finetune-miniLM-gallery. Changes to the [app.py](/app.py) file should be applied there aswell.
